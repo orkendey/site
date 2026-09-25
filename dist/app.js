@@ -1,9 +1,32 @@
 const $=s=>document.querySelector(s);const $$=s=>document.querySelectorAll(s);
 $('.menu').addEventListener('click',()=>{const n=$('header nav'),open=n.classList.toggle('open');$('.menu').setAttribute('aria-expanded',String(open));$('.menu').setAttribute('aria-label',open?'Закрыть меню':'Открыть меню')});
-$$('[data-apply]').forEach(b=>b.addEventListener('click',()=>{$('#application').reset();$('#form-result').textContent='';$('#apply-context').textContent=b.dataset.apply;$('#apply-dialog').showModal()}));
+
+// Bitrix24 CRM form: every consultation button opens the same live form.
+// The form is kept inside a dialog so the design stays consistent on all pages.
+const applyDialog=$('#apply-dialog');
+let bitrixMount=$('#bitrix-form');
+if(!bitrixMount&&applyDialog){
+ applyDialog.innerHTML='<button class="close" aria-label="Закрыть">×</button><p class="eyebrow">ДАВАЙТЕ ОБСУДИМ ОБУЧЕНИЕ</p><h2>Получите консультацию</h2><p id="apply-context">Оставьте контакты — подберём программу для вас или вашей организации.</p><div id="bitrix-form" aria-live="polite"></div>';
+ bitrixMount=$('#bitrix-form');
+}
+let bitrixLoaded=false;
+function loadBitrixForm(){
+ if(bitrixLoaded||!bitrixMount)return;
+ bitrixLoaded=true;
+ const formScript=document.createElement('script');
+ formScript.setAttribute('data-b24-form','inline/7/zj1ezy');
+ formScript.setAttribute('data-skip-moving','true');
+ formScript.text=`(function(w,d,u){var s=d.createElement('script');s.async=true;s.src=u+'?'+(Date.now()/180000|0);var h=d.getElementsByTagName('script')[0];h.parentNode.insertBefore(s,h);})(window,document,'https://cdn-ru.bitrix24.kz/b29748308/crm/form/loader_7.js');`;
+ bitrixMount.append(formScript);
+}
+function openApplication(context='Консультация по программе обучения'){
+ $('#apply-context').textContent=context;
+ loadBitrixForm();
+ applyDialog.showModal();
+}
+$$('[data-apply]').forEach(button=>button.addEventListener('click',()=>openApplication(button.dataset.apply)));
 $$('dialog .close').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
 $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}}));
-$('#application').addEventListener('submit',e=>{e.preventDefault();$('#form-result').textContent='Форма заполнена корректно. Это демоверсия: заявка не отправлена. Для связи с центром: edu@orkendey.kz.'});
 $$('[data-document]').forEach(b=>b.addEventListener('click',()=>{
  $('#document-title').textContent=b.dataset.document;
  $('#document-dialog').classList.toggle('wide-document',b.dataset.documentFormat==='landscape');
@@ -34,12 +57,8 @@ $$('[data-document]').forEach(b=>b.addEventListener('click',()=>{
  $('#document-dialog').showModal();
 }));
 $('#quick-application')?.addEventListener('submit',e=>{
- e.preventDefault();$('#application').reset();
- $('#application [name="name"]').value=$('#quick-name').value;
- $('#application [name="phone"]').value=$('#quick-phone').value;
- $('#apply-context').textContent='Консультация по программе обучения';
- $('#form-result').textContent='Форма заполнена. В демоверсии заявки не отправляются. Для связи с центром: edu@orkendey.kz.';
- $('#apply-dialog').showModal();
+ e.preventDefault();
+ openApplication('Консультация по программе обучения');
 });
 let currentFilter='all';function filter(){let count=0;const term=($('#course-search')?.value||'').trim().toLowerCase();$$('#catalog .course').forEach(c=>{const visible=(currentFilter==='all'||c.querySelector('.eyebrow').textContent===currentFilter)&&c.textContent.toLowerCase().includes(term);c.hidden=!visible;if(visible)count++});if($('#no-results'))$('#no-results').hidden=count>0}
 $('#course-search')?.addEventListener('input',filter);$$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{currentFilter=b.dataset.filter;$$('[data-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b))});filter()}));
